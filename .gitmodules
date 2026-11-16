@@ -1,0 +1,6 @@
+[submodule "contrib/cmsis"]
+	path = contrib/cmsis
+	url = https://github.com/ARM-software/CMSIS_6.git
+[submodule "contrib/irqn"]
+	path = contrib/irqn
+	url = https://github.com/SushiBits/irqn
