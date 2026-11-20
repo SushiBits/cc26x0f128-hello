@@ -15,4 +15,7 @@
 uint32_t SystemCoreClock;
 
 __attribute__((weak)) void SystemInit() {}
-void SystemCoreClockUpdate(void) {}
+
+// CC26x0, whenever operating, always run on 48MHz clock, whichever source.
+// Both internal RC and external XOSC through a multiplier emits 48MHz.
+void SystemCoreClockUpdate(void) { SystemCoreClock = 48000000; }
