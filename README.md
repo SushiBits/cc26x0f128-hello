@@ -244,48 +244,46 @@ whose value cannot outlive its assembly.
 because it dropped the radio. Reproducibility was not achieved alongside the
 dead end; it was achieved *by* accepting the dead end.
 
-## Where the black box sits
+## Auditability is a delivery requirement, not a preference
 
-The question is not whether a black box exists. Silicon is opaque, always, and
-that is not a problem. The question is where the boundary falls and whether
-your own code can be audited against something written down.
+Everything above is a licensing and engineering argument. An individual can
+decide to live with a blob. A company generally cannot, and not for ideological
+reasons: it has to be able to evidence what it shipped.
 
-Three ways to ship a radio, in order of how well they survive scrutiny:
+In the regimes that govern shipping products, the integrator is treated as the
+manufacturer and carries the obligation:
 
-**AT86RF233 — the box is in the silicon only.** A transceiver with no firmware
-at all: a documented register interface over SPI, and every line that drives it
-is yours. There is nothing opaque inside your image, so auditing means checking
-your code against the datasheet. This is the normal shape of a hardware
-component, and it is fine.
+- **EU Cyber Resilience Act** (Reg. (EU) 2024/2847) — in force since December
+  2024 with obligations phasing in through 2027. It requires vulnerability
+  handling, security updates for a defined support period, and a software bill
+  of materials.
+- **FDA §524B** of the FD&C Act — premarket cybersecurity for medical devices,
+  including an SBOM and a monitoring and patching plan.
+- **IEC 62443** for industrial automation and **UN R155** for automotive —
+  both push component-level transparency down the supply chain.
 
-**STM32WB55 — the box is on the other core.** The radio stack is a binary too,
-running on the M0+, flashed as a firmware image rather than linked into your
-M4 binary. Two things make the difference: it is a bounded peripheral you talk
-to through a documented interface, and it is **redistributable** — the
-middleware licence (SLA0044) permits "the redistribution, reproduction and use
-in source and binary forms ... with or without modification". So a project can
-vendor it, a clone can build, and CI can run.
+An SBOM can *name* a binary. It cannot characterise one. None of these regimes
+is satisfied by the vendor's assurance that a blob is fine, because the
+obligation to assess and to patch sits with whoever put the product on the
+market.
 
-**CC26x0 — the box is inside your image.** The stack arrives as `.a` archives
-that link into the same binary as your code, cannot be redistributed, cannot be
-reverse engineered, and have no source equivalent. There is no boundary to
-point at. The opaque part is interleaved with your own, in one artefact you
-must hand over whole.
+And the radio stack is not an incidental blob. It is remotely reachable. The
+precedent is **SweynTooth** (2020): 18 vulnerabilities across the BLE SDKs of
+six SoC vendors, producing deadlocks, crashes, buffer overflows and in one case
+a bypass of the pairing procedure. **TI was among the affected vendors, with
+three CVEs in that set targeting the CC26xx family** — CVE-2019-17520,
+CVE-2019-19193 and CVE-2020-13593.
 
-That ordering is also what gets lost in the usual "is it open?" argument. The
-first is fully auditable. The second is auditable at its boundary — you can
-account for everything you wrote and identify the opaque part precisely. Only
-the third leaves you unable to answer the question at all.
+So the question a compliance function asks is not academic: *when the next one
+lands, can you tell whether you are affected, and can you remediate?* Here the
+answer is no twice over. The controller cannot be rebuilt, so a fix exists only
+at TI's discretion and only if they choose to ship one for this part; and where
+logic sits in silicon rather than flash, not even then.
 
-Which is the irony worth recording, because TI's customers for these dev kits
-are overwhelmingly companies, and companies are the ones who have to produce
-auditable evidence: security review, supply-chain attestation, certification
-against functional-safety or medical standards, and — increasingly — software
-bill-of-materials obligations under things like the EU Cyber Resilience Act.
-Those obligations attach to the shipped image. A component that cannot be
-declared in an SBOM, cannot be reviewed, and cannot be replaced is a
-procurement problem before it is an ideological one. The closed shape here is
-least suited to exactly the customer it is aimed at.
+Unpatchable is not an inconvenience. It is a liability with a name attached.
+That is why an unauditable radio stack fails security review before it ever
+reaches a licensing review — and why this is a project killer rather than an
+aesthetic objection.
 
 ## The hardware, and why it is being scrapped
 
