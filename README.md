@@ -244,6 +244,49 @@ whose value cannot outlive its assembly.
 because it dropped the radio. Reproducibility was not achieved alongside the
 dead end; it was achieved *by* accepting the dead end.
 
+## Where the black box sits
+
+The question is not whether a black box exists. Silicon is opaque, always, and
+that is not a problem. The question is where the boundary falls and whether
+your own code can be audited against something written down.
+
+Three ways to ship a radio, in order of how well they survive scrutiny:
+
+**AT86RF233 — the box is in the silicon only.** A transceiver with no firmware
+at all: a documented register interface over SPI, and every line that drives it
+is yours. There is nothing opaque inside your image, so auditing means checking
+your code against the datasheet. This is the normal shape of a hardware
+component, and it is fine.
+
+**STM32WB55 — the box is on the other core.** The radio stack is a binary too,
+running on the M0+, flashed as a firmware image rather than linked into your
+M4 binary. Two things make the difference: it is a bounded peripheral you talk
+to through a documented interface, and it is **redistributable** — the
+middleware licence (SLA0044) permits "the redistribution, reproduction and use
+in source and binary forms ... with or without modification". So a project can
+vendor it, a clone can build, and CI can run.
+
+**CC26x0 — the box is inside your image.** The stack arrives as `.a` archives
+that link into the same binary as your code, cannot be redistributed, cannot be
+reverse engineered, and have no source equivalent. There is no boundary to
+point at. The opaque part is interleaved with your own, in one artefact you
+must hand over whole.
+
+That ordering is also what gets lost in the usual "is it open?" argument. The
+first is fully auditable. The second is auditable at its boundary — you can
+account for everything you wrote and identify the opaque part precisely. Only
+the third leaves you unable to answer the question at all.
+
+Which is the irony worth recording, because TI's customers for these dev kits
+are overwhelmingly companies, and companies are the ones who have to produce
+auditable evidence: security review, supply-chain attestation, certification
+against functional-safety or medical standards, and — increasingly — software
+bill-of-materials obligations under things like the EU Cyber Resilience Act.
+Those obligations attach to the shipped image. A component that cannot be
+declared in an SBOM, cannot be reviewed, and cannot be replaced is a
+procurement problem before it is an ideological one. The closed shape here is
+least suited to exactly the customer it is aimed at.
+
 ## The hardware, and why it is being scrapped
 
 The KiCad sources in `hardware/` are kept for the record. **Do not fabricate
