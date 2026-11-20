@@ -319,24 +319,31 @@ does not help. It is not a register interface that hardware consults; it is a
 parameter block that code at a fixed address reads. Every access to it in the
 SDK is software: `setup.c` and `osc.c` read it while trimming, `setup_rom.c`
 mirrors what the boot ROM does with it, and `flash.c` takes its sector-protection
-offsets from it. The consumer is code, which is why the parameters must sit at a
-known address in a fixed layout. It is an ABI to firmware you cannot link
-against, not a documented interface to the part.
+offsets from it.
 
-It also does not sidestep the withheld registers. It points back into them. Three
-of its fields are defined only as offsets against values the manual does not
-document: `MODE_CONF_1.DELTA_IBIAS_INIT` and `DELTA_IBIAS_OFFSET` are each
-specified as "See FCFG1:AMPCOMP_CTRL1.IBIAS_INIT" and "…IBIAS_OFFSET", and
-`MODE_CONF.VDDR_TRIM_SLEEP_DELTA` as "See FCFG1:VOLT_TRIM.VDDR_TRIM_SLEEP_H". To
-set them you need the semantics of the internal registers, which is precisely
-what cannot be obtained.
+That mechanism is not itself a defect, and it would be wrong to present it as
+one. Renesas RA parts do the same thing: option-setting memory sits at fixed
+addresses in flash, consumed by the boot ROM and by reset-time hardware options,
+and FSP fills it from ordinary compile-time constants — `BSP_CFG_OPTION_SETTING_OFS0`
+and `OFS1` placed into `.option_setting_ofs0` and `.option_setting_ofs1`. A
+flash-resident config block read by immutable ROM is an ordinary design, and on a
+part whose fields are documented it is a perfectly workable one.
+
+What differs is what the fields mean. Renesas documents its option bytes, so the
+constants that produce them can be chosen, reviewed and defended. CCFG's fields
+do not stand on their own. Three of them are defined only as offsets against
+values the manual does not document: `MODE_CONF_1.DELTA_IBIAS_INIT` and
+`DELTA_IBIAS_OFFSET` are each specified as "See FCFG1:AMPCOMP_CTRL1.IBIAS_INIT"
+and "…IBIAS_OFFSET", and `MODE_CONF.VDDR_TRIM_SLEEP_DELTA` as "See
+FCFG1:VOLT_TRIM.VDDR_TRIM_SLEEP_H". To set them you need the semantics of the
+internal registers, which is precisely what cannot be obtained.
 
 Had those registers been documented, none of this would be necessary. The same
 intent would be a handful of `#define`s in a project header — compile-time
 constants the compiler folds into a short chain of writes, or read-modify-writes,
-against registers whose meaning you can state and defend. CCFG exists because the
-code that applies it is fixed, so its parameters have to be delivered through
-memory layout rather than through an argument.
+against registers whose meaning you can state and defend. That is not a
+hypothetical shape: it is what Renesas ships. The structure is not the problem.
+The withheld semantics are.
 
 That is the shape of the difference, and it is not about size or licence text.
 AT86RF233 puts the box in silicon and STM32WB55 puts it on another core; both
