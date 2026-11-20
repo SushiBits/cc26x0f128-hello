@@ -4,9 +4,10 @@ A bare-metal C starter for the TI CC2640F128 (SimpleLink CC26x0), built
 without TI's SDK and without Code Composer Studio.
 
 **Status: abandoned.** Kept as a record of why, and of the parts that did
-work. The blocker is not the amount of vendor code — it is that the clock tree
-cannot be brought up without values the manual withholds, and the routines that
-do it exist only as mask ROM with no source. See below.
+work. The short version: there is no free-standing open way to bring up a
+clock tree on this part. The only implementation that works needs TI's code,
+and taking it means taking the surrounding tree with it, which is not open from
+end to end. See below.
 
 ## Why this is a dead end
 
@@ -48,28 +49,30 @@ There is no published source for those values and no description of how to
 interpret them. Reading them out blind and writing them back is guesswork with
 an oscillator.
 
-### 2. The supported path is mask ROM, not source
+### 2. The clock setup exists only as vendor code
 
-TI's answer to the above is driverlib, and driverlib is genuinely open: it is
-BSD-3-Clause and redistributable. But it does not contain the clock setup. It
-is a thin wrapper over routines burned into the die:
+TI's answer to the above is driverlib, and driverlib is genuinely open:
+BSD-3-Clause, readable, patchable, redistributable.
 
-| File | Calls into ROM |
-|---|---|
-| `setup.c` | `ROM_SetupTrimDevice` |
-| `osc.c` | `ROM_OSCClockSourceSet`, `ROM_OSCClockSourceGet`, `ROM_OSCHF`, `ROM_OSC` (10 calls) |
-| `aon_wuc.c` | `ROM_AONWUCOscConfig`, `ROM_AONWUCAuxReset`, `ROM_AONWUCRechargeCtrlConfigSet` |
-| `aux_wuc.c` | `ROM_AUXWUCClockEnable/Disable/Status`, `ROM_AUXWUCPowerCtrl` |
+It also does contain the clock setup. `setup.c` is a complete 394-line
+`SetupTrimDevice` implementation that reads FCFG1 and trims the device, and
+every one of the ten `ROM_*` calls in `osc.c` has a `NOROM_` source
+equivalent — `OSCClockSourceSet`, `OSCHF_TurnOnXosc`,
+`OSCHF_AttemptToSwitchToXosc` and the rest. The `ROM_` variants exist to save
+flash, not to withhold anything. Nothing about the oscillator is hidden behind
+a binary.
 
-The ROM is fabricated into the silicon. Its source does not exist in
-distributable form and never will. This is not a licence term that can be
-argued with — it is a load-bearing component for which source is physically
-unavailable. `rom.h` declares the entry points, so they can be called and
-linked, but not read, audited, ported, patched or replaced.
+The problem is not that the code is unreadable. It is that the code has no
+specification. What `SetupTrimDevice` does is interpret factory calibration
+values whose meaning is precisely what the manual declines to document. The
+code can be read, but it cannot be checked, and it cannot be rewritten from
+published information: its correctness rests on TI's authority alone.
 
-That is the precise sense in which this dependency tree is not open source.
-Individual files are. The tree as a whole is not, because the part that does
-the work you actually need has no source at all.
+That is the narrower sense in which this is not an open platform. Not a
+licence, and not a hidden blob, but a load-bearing piece of logic with no
+documented contract. Anyone writing their own clock setup would be working
+against undocumented per-die data with no way to know they had got it right
+until the part misbehaved in a way that is very hard to attribute.
 
 ### 3. The radio cannot be programmed directly
 
@@ -82,8 +85,10 @@ starter for anything above a toy.
 This is not a defect in TI's documentation; it is how the part works. It is
 also the least surprising of these, and on its own it would not have been
 fatal — a project that used TI's stack deliberately is a normal project. What
-makes it terminal here is finding 2: the stack is not merely closed, it is
-partly not source.
+makes it terminal here is that the stack is not a library you can take or
+leave. Using it means adopting TI's build system, TI-RTOS and XDCtools along
+with it, and for BLE, linking a binary. The clock dependency from finding 2
+is what forces that adoption in the first place.
 
 ### 4. The device description that might have bypassed all of it does not exist
 
@@ -216,18 +221,18 @@ The SVD work in this repository is reusable as-is: the normalized device
 description, the verification against TI's headers, and the generation
 pipeline are all correct and independent of the application.
 
-Continuing means accepting the ROM blob. There is no third option: the clock
-tree is either set up by `ROM_SetupTrimDevice` and the `ROM_OSC*` family, or it
-is not set up. `cc26xxware` (driverlib plus the `hw_*.h` headers) on top of the
-BLE SDK's build system is the supported arrangement, and it works — it is just
-not open source in the sense that word is normally meant, and treating it as
-though it were is what this project got wrong.
+Continuing means accepting that the clock setup will be TI's code. There is no
+third option: it is either their implementation, or your own against
+undocumented calibration data. For most people the first is obviously correct
+— it works, it is BSD-3-Clause, and it can be read and patched. That is a
+reasonable engineering decision, and it is a different decision from the one
+this project set out to make.
 
-Worth being clear about the size of the compromise: it is one opaque component
-(a mask ROM that every CC26xx already contains), not a licence over the whole
-tree. driverlib and the register headers are BSD-3-Clause and can be read and
-patched. If a dependency on unreadable code is acceptable — as it is for most
-people who ship this part — the project is workable today.
+`cc26xxware` (driverlib plus the `hw_*.h` headers) on top of the BLE SDK's
+build system is the supported arrangement and it works. What it is not is a
+free-standing open stack: the clock has no specification, and the radio has no
+source. A project that is content to depend on TI for those two things is
+perfectly viable — it just is not the project this repository was.
 
 ## Layout
 
