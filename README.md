@@ -201,6 +201,49 @@ missing. A method that works on one TI family is defeated on another by what
 the documentation chooses to say, in a way no amount of engineering effort
 recovers.
 
+## Why it could never have been maintained
+
+Openness is a licensing argument. This is the practical one, and it is the one
+that decides whether the result is a project or a one-off.
+
+The test is whether `git clone && make` works. That is what makes a project
+maintainable at all: a new contributor builds it, CI builds it, a bisect
+builds it, and a bug report from two years ago can be reproduced.
+
+With the radio in the tree, that test cannot pass, and the licence is why:
+
+- **The blobs cannot be redistributed.** The SDK licence permits distribution
+  only as "embedded executable copies of such Licensed Materials that execute
+  solely and exclusively on, or in conjunction with, TI Devices" (§iv). They
+  cannot be committed, vendored, mirrored, or attached to a release.
+- **The download cannot be delegated.** §11 requires the downloader to make
+  export-control representations personally — that they are not located in or
+  under the control of an embargoed country, are not on the SDN or Denied
+  Persons lists, and will not use the materials for weapons end-uses. A CI
+  runner cannot make those representations on a contributor's behalf, and a
+  hosted service has no business accepting them. There is also a PRC
+  registration obligation in §11a that falls on the recipient.
+- **The binary cannot be inspected to work around it.** The licence forbids
+  reverse engineering the object-code portions, "nor permit any person or
+  entity to do so" — which closes the obvious fallback of disassembling the
+  stack to demonstrate what it does.
+
+So every consumer must obtain the SDK individually, accept terms in their own
+name, and end up with a dependency that cannot be pinned by content hash,
+cannot be cached, cannot be mirrored, and cannot be audited. Builds are not
+hermetic; two people with the same commit do not have the same inputs.
+
+The result is a class of project that is buildable exactly once, by the person
+who assembled it, on the machine where they assembled it. Not a library, not a
+platform, not something anyone can fork and fix. One-off. Consumable. That is
+what "e-waste" means in engineering terms rather than as an insult: an artefact
+whose value cannot outlive its assembly.
+
+**This repository is the proof by construction.** It builds from a fresh clone
+— public submodules, `make`, zero errors, 1480 bytes of text — precisely
+because it dropped the radio. Reproducibility was not achieved alongside the
+dead end; it was achieved *by* accepting the dead end.
+
 ## The hardware, and why it is being scrapped
 
 The KiCad sources in `hardware/` are kept for the record. **Do not fabricate
@@ -229,7 +272,8 @@ cannot be accounted for — not by the operator to an inspector, and not by
 anyone downstream. The clock is not the obstacle here: driverlib's source is
 readable, and a mask ROM with a published source equivalent is a flash
 optimisation, not a secrecy problem. The stack is the obstacle, because there
-is nothing to read and no equivalent to substitute.
+is nothing to read, no equivalent to substitute, and the licence forbids
+disassembling it to demonstrate what it does.
 
 So the two failures compound. The FEM turned the board into a transmitter that
 needs amateur rules in order to be legal at all. The closed radio stack made it
@@ -389,3 +433,7 @@ published by the [cmsis-svd-data](https://github.com/cmsis-svd/cmsis-svd-data)
 project, itself derived from TI's device database. It is included here because
 it cannot be obtained in this corrected form anywhere else; review TI's terms
 before redistributing it further.
+
+No TI SDK, BLE stack or other TI object code is included, because none of it
+may be redistributed. This repository contains no vendor binaries at all, which
+is why it is self-contained and why it cannot use the radio.
