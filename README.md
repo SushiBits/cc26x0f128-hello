@@ -1,7 +1,8 @@
 # cc26x0f128-hello
 
-A bare-metal C starter for the TI CC2640F128 (SimpleLink CC26x0), built
-without TI's SDK and without Code Composer Studio.
+A bare-metal C starter for the TI CC2640F128 (SimpleLink CC26x0), built on an
+open toolchain: GNU make, `arm-none-eabi-gcc`, and a device header generated
+from a CMSIS-SVD. No vendor IDE, no vendor SDK, no vendor build system.
 
 **Status: abandoned.** Kept as a record of why, and of the parts that did
 work. The short version: there is no free-standing open way to bring up a
@@ -130,6 +131,49 @@ bit exists at position 7, not what it does.
 provided API" — the semantic content an SVD cannot supply and the manual
 declines to. Separately, the manual is copyrighted, so even the documented
 half cannot be redistributed next to the code that depends on it.
+
+## The same method, on two parts
+
+This was not a question of difficulty, and it is worth recording why, because
+the same technique was applied to TI's MSPM0 family first and worked: take the
+vendor's per-peripheral headers, rebuild them into a CMSIS-SVD, generate a
+device header, drive the registers directly. That is a reasonable amount of
+work and it pays off.
+
+The same approach here does not pay off, and the difference is measurable in
+the same units on both families:
+
+| | MSPM0 | CC26x0 |
+|---|---|---|
+| CMSIS-SVD shipped by TI | none | none |
+| per-peripheral header tree | 43 files, 6.5 MB | 58 files |
+| "Only to be used through TI provided API" in those headers | **0** | **1054**, across 15 files |
+| the same phrase in the reference manual | **0** in 6.0 M characters | **1441** in 3.0 M characters |
+| header-to-SVD rebuild | viable — the manual specifies the registers | not viable — the clock cannot be specified from published material |
+
+The MSPM0 manual (SLAU847, 6.0 M characters extracted) does not contain the
+phrase at all. The CC26x0 manual (SWCU117, 3.0 M characters) contains it once
+every ~2,100 characters.
+
+In the headers it is concentrated precisely where it does the most damage:
+
+| Header | Occurrences |
+|---|---|
+| `hw_flash.h` | 322 |
+| `hw_fcfg1.h` | 231 |
+| `hw_adi_0_rf.h` | 159 |
+| `hw_adi_3_refsys.h` | 66 |
+| `hw_ddi_0_osc.h` | 61 |
+| `hw_adi_4_aux.h` | 57 |
+
+`hw_fcfg1.h` is the factory calibration from finding 1, and `hw_ddi_0_osc.h`
+is the oscillator controller. The two headers that would have to be understood
+to bring up a clock are the second and fifth most withheld in the tree.
+
+So the conclusion is not that this was too hard, or that the tooling was
+missing. A method that works on one TI family is defeated on another by what
+the documentation chooses to say, in a way no amount of engineering effort
+recovers.
 
 ## The rest of the record
 
