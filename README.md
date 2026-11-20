@@ -294,11 +294,25 @@ rewritten from published information. There is no line that excludes it.
 
 Nor does it help that this code only writes numbers into registers. A
 calibration constant applied to an oscillator register whose derivation is
-undocumented is no more accountable to an auditor than an encrypted blob, and in
-one respect it is worse: it is indistinguishable from code you wrote. In a diff,
-in a review, in an SBOM, a magic number supplied by the vendor looks exactly
-like a magic number you chose yourself. The blob at least announces that it is a
-blob.
+undocumented is not merely as opaque as an encrypted blob — it is worse, in two
+ways a blob is not.
+
+A blob can be attested. Flash the vendor's image, hash it, compare that against
+the copy they published: identical hashes are evidence of provenance that an
+auditor can accept without reading a single byte. Calibration constants admit no
+such check. They are measured on each die at final test and differ from device
+to device, so there is no upstream value to compare against, no hash that means
+anything, and nothing to declare in an SBOM beyond "read out of the chip at
+runtime".
+
+And they are not incidental. The trim sets the oscillator's frequency accuracy,
+which is precisely what certification measures and what an inspection asks
+about: the carrier offset decides whether a transmitter stays inside its
+allocation. `ccfg.c` shows the shape of it, where
+`MODE_CONF_XOSC_CAPARRAY_DELTA` is a signed 8-bit per-device adjustment applied
+directly to the trimmed crystal cap-array value. In a diff, in a review, in an
+SBOM, that number is indistinguishable from one you chose yourself. The blob at
+least announces that it is a blob; the constant says nothing at all.
 
 That is the shape of the difference, and it is not about size or licence text.
 AT86RF233 puts the box in silicon and STM32WB55 puts it on another core; both
