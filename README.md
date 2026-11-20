@@ -314,6 +314,30 @@ directly to the trimmed crystal cap-array value. In a diff, in a review, in an
 SBOM, that number is indistinguishable from one you chose yourself. The blob at
 least announces that it is a blob; the constant says nothing at all.
 
+There is a configuration structure — CCFG, the last 88 bytes of flash — and it
+does not help. It is not a register interface that hardware consults; it is a
+parameter block that code at a fixed address reads. Every access to it in the
+SDK is software: `setup.c` and `osc.c` read it while trimming, `setup_rom.c`
+mirrors what the boot ROM does with it, and `flash.c` takes its sector-protection
+offsets from it. The consumer is code, which is why the parameters must sit at a
+known address in a fixed layout. It is an ABI to firmware you cannot link
+against, not a documented interface to the part.
+
+It also does not sidestep the withheld registers. It points back into them. Three
+of its fields are defined only as offsets against values the manual does not
+document: `MODE_CONF_1.DELTA_IBIAS_INIT` and `DELTA_IBIAS_OFFSET` are each
+specified as "See FCFG1:AMPCOMP_CTRL1.IBIAS_INIT" and "…IBIAS_OFFSET", and
+`MODE_CONF.VDDR_TRIM_SLEEP_DELTA` as "See FCFG1:VOLT_TRIM.VDDR_TRIM_SLEEP_H". To
+set them you need the semantics of the internal registers, which is precisely
+what cannot be obtained.
+
+Had those registers been documented, none of this would be necessary. The same
+intent would be a handful of `#define`s in a project header — compile-time
+constants the compiler folds into a short chain of writes, or read-modify-writes,
+against registers whose meaning you can state and defend. CCFG exists because the
+code that applies it is fixed, so its parameters have to be delivered through
+memory layout rather than through an argument.
+
 That is the shape of the difference, and it is not about size or licence text.
 AT86RF233 puts the box in silicon and STM32WB55 puts it on another core; both
 boundaries are facts about the part that survive being rebuilt by anybody. The
