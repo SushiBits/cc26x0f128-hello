@@ -264,6 +264,18 @@ own source against the datasheet. The split is silicon, which means it is a fact
 about the part and survives any build system. This is the normal shape of a
 hardware component, and it is fine.
 
+**MM32W073PFB — the same boundary, on one package.** An MM32F073 Cortex-M0 with
+a 2.4GHz transceiver beside it in a single package, and it stays in this
+category rather than dropping to a worse one. The radio is hardware with a
+register interface — an AT86RF231-style design, by its owner's reading — not
+firmware on a second core, so whether the two blocks share a die or only a
+package changes nothing an auditor cares about. Integration is not what makes a
+boundary unverifiable. A CPU executing vendor code is.
+
+It is also discontinued, which is the other half of the same problem. An
+auditable part you can no longer buy is still a supply risk; it is simply a
+different one from an unauditable part you can.
+
 **STM32WB55 — the boundary is a core.** The wireless firmware is a binary too,
 but it runs on the M0+ and is flashed as its own image. ST is explicit about the
 split: "All the code running on CPU2 is delivered as an encrypted binary.
