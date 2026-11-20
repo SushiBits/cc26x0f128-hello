@@ -115,5 +115,10 @@ contrib/platform/include/*.h
 !contrib/platform/include/*_it.h
 !contrib/platform/include/system_*.h
 
+# Vendor reference documents. TI's datasheets, TRM and application notes are
+# copyrighted and are not redistributed with this repository; see the README
+# for where to obtain them. Drop them here locally if you want them on hand.
+docs/*.pdf
+
 .build/
 *.log
