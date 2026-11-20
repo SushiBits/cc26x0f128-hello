@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<device xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" schemaVersion="1.1" xs:noNamespaceSchemaLocation="CMSIS-SVD_Schema_1_0.xsd">
+<device xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" schemaVersion="1.1" xs:noNamespaceSchemaLocation="CMSIS-SVD.xsd">
    <name>CC26x0F128</name>
    <version>2.3</version>
    <description>SimpleLink CC26xx Ultra-low power wireless MCU</description>
@@ -18,59 +18,7 @@
    <access>read-write</access>
    <resetMask>0xFFFFFFFF</resetMask>
    <peripherals>
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-   <peripheral>
+      <peripheral>
          <name>AON_BATMON</name>
          <description>Always On (AON) Battery And Temperature MONitor (BATMON) residing in the AON domain  Note: This module only supports 32 bit Read/Write access from MCU.  </description>
          <baseAddress>0x40095000</baseAddress>
