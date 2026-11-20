@@ -247,45 +247,68 @@ dead end; it was achieved *by* accepting the dead end.
 ## Where the black box sits
 
 The question is not whether a black box exists. Silicon is opaque, always, and
-that is not a problem. The question is where the boundary falls and whether
-your own code can be audited against something written down.
+that is not a problem. The question is where the boundary falls — because that
+is what decides whether anyone can point at it.
+
+Auditors and compliance reviewers accept a boundary they can treat as a fact: a
+die, a core, a discrete flashed artefact with an address and a version. What
+nobody can work with is an opaque region with no edge, because there is then
+nothing to name, hash, version, replace or declare.
 
 Three ways to ship a radio, in order of how well they survive scrutiny:
 
-**AT86RF233 — the box is in the silicon only.** A transceiver with no firmware
-at all: a documented register interface over SPI, and every line that drives it
-is yours. There is nothing opaque inside your image, so auditing means checking
-your code against the datasheet. This is the normal shape of a hardware
-component, and it is fine.
+**AT86RF233 — the boundary is the die.** A transceiver with no firmware at all:
+a documented register interface over SPI, and every line that drives it is
+yours. Your firmware contains no vendor code, so auditing means checking your
+own source against the datasheet. The split is silicon, which means it is a fact
+about the part and survives any build system. This is the normal shape of a
+hardware component, and it is fine.
 
-**STM32WB55 — the box is on the other core.** The radio stack is a binary too,
-running on the M0+, flashed as a firmware image rather than linked into your
-M4 binary. Two things make the difference: it is a bounded peripheral you talk
-to through a documented interface, and it is **redistributable** — the
-middleware licence (SLA0044) permits "the redistribution, reproduction and use
-in source and binary forms ... with or without modification". So a project can
-vendor it, a clone can build, and CI can run.
+**STM32WB55 — the boundary is a core.** The wireless firmware is a binary too,
+but it runs on the M0+ and is flashed as its own image. ST is explicit about the
+split: "All the code running on CPU2 is delivered as an encrypted binary.
+Blackbox for customer perspective" (AN5289 §4.1), and "the customer has only
+access to CPU1 core and sees the firmware running on CPU2 as a blackbox"
+(§10.4). Two things follow. The opaque part has an address, a version and a hash,
+so it can be declared and attested even if it cannot be read — and the system
+clock on CPU1 is yours to write from a reference manual that documents the
+bits. Bounded, attributable, and reproducible by anyone with the binary, which
+SLA0044 permits redistributing.
 
-**CC26x0 — the box is inside your image.** The stack arrives as `.a` archives
-that link into the same binary as your code, cannot be redistributed, cannot be
-reverse engineered, and have no source equivalent. There is no boundary to
-point at. The opaque part is interleaved with your own, in one artefact you
-must hand over whole.
+**CC26x0 — the boundary is a vendor toolchain, and only there.** The stack
+arrives as `.a` archives. TI's own IAR flow does produce a separate stack image:
+`lib_search.exe` generates the link list from `blelib/`, and `frontier.exe`
+applies a `.bdef`/`.xcl` boundary in a post-build step. But that split is a
+property of their build tools, not of the silicon. Hand-roll the build — which
+is the entire premise of this repository — and there is no `frontier` step: the
+archives link into your image and the boundary reverts to what it structurally
+is, which is none.
 
-That ordering is also what gets lost in the usual "is it open?" argument. The
-first is fully auditable. The second is auditable at its boundary — you can
-account for everything you wrote and identify the opaque part precisely. Only
-the third leaves you unable to answer the question at all.
+It is also worse than a linking question, and this is where the leeching shows.
+A radio does not run on its own clock. Everything derives from the system clock,
+which is set up by vendor code executing on *your* core, reading factory
+calibration values whose semantics the manual withholds. So even if the radio
+were sealed off tomorrow, vendor logic would still be inside your firmware,
+because the clock tree the radio depends on is vendor-written and cannot be
+rewritten from published information. There is no line that excludes it.
+
+That is the shape of the difference, and it is not about size or licence text.
+AT86RF233 puts the box in silicon and STM32WB55 puts it on another core; both
+boundaries are facts about the part that survive being rebuilt by anybody. The
+CC26x0 puts it inside your image, behind a split that only the vendor's tooling
+can produce, with the clock tree — the thing everything else depends on —
+vendor-supplied and unspecified. The first is fully auditable. The second is
+auditable at its boundary. Only the third leaves you unable to answer the
+question at all.
 
 Which is the irony worth recording, because TI's customers for these dev kits
 are overwhelmingly companies, and companies are the ones who have to produce
 auditable evidence: security review, supply-chain attestation, certification
 against functional-safety or medical standards, and — increasingly — software
-bill-of-materials obligations under things like the EU Cyber Resilience Act.
-Those obligations attach to the shipped image. A component that cannot be
-declared in an SBOM, cannot be reviewed, and cannot be replaced is a
-procurement problem before it is an ideological one. The closed shape here is
-least suited to exactly the customer it is aimed at.
+bill-of-materials obligations. Those obligations attach to the shipped image. A
+component that cannot be declared in an SBOM, cannot be reviewed, and cannot be
+replaced is a procurement problem before it is an ideological one. The closed
+shape here is least suited to exactly the customer it is aimed at.
 
 ## Auditability is a delivery requirement, not a preference
 
