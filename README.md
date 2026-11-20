@@ -18,7 +18,7 @@ from a CMSIS-SVD. No vendor IDE, no vendor SDK, no vendor build system.
 work. The short version: the clock setup is vendor code that is at least
 readable, but the radio stack is precompiled archives with no source and no
 equivalent, so anything using this part as a radio takes TI's tree along with
-it. The hardware is being scrapped for a separate reason — see
+it. The hardware is being scrapped for a separate reason 鈥?see
 [the hardware](#the-hardware-and-why-it-is-being-scrapped). See below.
 
 ## Why this is a dead end
@@ -36,7 +36,7 @@ underneath.
 ### 1. The clock tree needs factory values the manual does not give you
 
 The device starts on its internal high-frequency RC oscillator, and everything
-else is derived from it — `SystemCoreClock` included, which every delay, timer,
+else is derived from it 鈥?`SystemCoreClock` included, which every delay, timer,
 baud rate and bus timing scales from. Bringing it up is not a matter of setting
 a divider: the oscillator has to be calibrated against values measured on each
 individual die at final test.
@@ -64,13 +64,13 @@ There is no published source for those values and no description of how to
 interpret them. Reading them out blind and writing them back is guesswork with
 an oscillator.
 
-### 2. The clock setup is vendor code — and the ROM is a distraction
+### 2. The clock setup is vendor code 鈥?and the ROM is a distraction
 
 TI's answer to the above is driverlib, and driverlib is genuinely open:
 BSD-3-Clause, readable, patchable, redistributable. It also contains the clock
 setup in full. `setup.c` is a complete 394-line `SetupTrimDevice` that reads
 FCFG1 and trims the device, and all ten `ROM_*` calls in `osc.c` have a
-`NOROM_` source equivalent — `OSCClockSourceSet`, `OSCHF_TurnOnXosc`,
+`NOROM_` source equivalent 鈥?`OSCClockSourceSet`, `OSCHF_TurnOnXosc`,
 `OSCHF_AttemptToSwitchToXosc` and the rest.
 
 That last point matters, because it removes the mask ROM from the argument.
@@ -78,13 +78,13 @@ That last point matters, because it removes the mask ROM from the argument.
 behaviour that is published as readable source in the same package. Redirecting
 a call site to the `NOROM_` implementation is a `#define`; the ROM is never
 required. So a card that ships a ROM block is not a disclosure problem when the
-same logic is available as source — and here it is.
+same logic is available as source 鈥?and here it is.
 
 What is genuinely undocumented is narrower: the FCFG1 calibration the code
 consumes. You can read exactly what `SetupTrimDevice` does with each value, but
 not what the values mean, because their field semantics are what the manual
 declines to document. So the clock is inspectable, and reimplementable only
-with the source in hand — but not verifiable against a specification, and not
+with the source in hand 鈥?but not verifiable against a specification, and not
 writable from published information alone.
 
 That is a real limit, and it is a modest one. It is not the limit that kills
@@ -94,14 +94,14 @@ this project. The next finding is.
 
 The RF core is a separate Cortex-M0 running TI-supplied firmware, and the BLE
 protocol stack ships as precompiled archives with no source: hundreds of them
-in `blelib/`, `cc2640_ctrl_*.a` at 0.7–1.1 MB each and `host_*.a` at 1.0–1.8 MB
+in `blelib/`, `cc2640_ctrl_*.a` at 0.7鈥?.1 MB each and `host_*.a` at 1.0鈥?.8 MB
 each, plus the HCI transport layers. Nothing in the SDK corresponds to them.
 
 This is where the ROM comparison stops being a distraction and becomes the
 argument. For the oscillator, TI publishes the logic as source and the ROM is
 optional. For the radio, there is no source at all, no `NOROM_` equivalent, and
 no way to build a link without the archives. There is no register-level path to
-a working radio either, so the binary is not a convenience — it is the only
+a working radio either, so the binary is not a convenience 鈥?it is the only
 implementation that exists.
 
 Which means using this part as a radio means adopting TI's build system,
@@ -112,7 +112,7 @@ anything else in the tree.
 
 Worth being explicit about what would fix it, since it is not exotic. TI could
 document the ROM in the reference manual or an application note, and an
-operator could then show that document to an inspector — the oscillator case is
+operator could then show that document to an inspector 鈥?the oscillator case is
 already nearly there, because driverlib's source is the reference. No
 equivalent exists for the stack, and no amount of documentation substitutes for
 source when the question is what the transmitter is actually doing.
@@ -122,7 +122,7 @@ source when the question is what the transmitter is actually doing.
 **No vendor SVD exists.** Neither BLE SDK 2.2 nor the cc26xxware package it
 depends on contains one, and a recursive search of the whole `C:\ti` install
 (BLE SDK 2.2, TI-RTOS, SysConfig, MSPM0 SDK) returns zero `.svd` files. What
-TI ships instead is hand-maintained `hw_*.h` register headers — an equivalent
+TI ships instead is hand-maintained `hw_*.h` register headers 鈥?an equivalent
 for humans, not an input for a generator.
 
 **SysConfig is not an alternative.** Its device data is JSON under
@@ -130,7 +130,7 @@ for humans, not an input for a generator.
 `register`, `bitfield`, `interrupt`, `addressOffset` and `baseAddress` returns
 zero hits for all five. It carries pinmux, packages, power domains and cores.
 There is no register data to convert, and there is no `CC2640F128` part entry
-either — only the CC2640R2F variants. No converter, however written, can
+either 鈥?only the CC2640R2F variants. No converter, however written, can
 recover information that is not there.
 
 **The one published SVD is defective.** `cmsis-svd-data` carries
@@ -145,7 +145,7 @@ right registers. It is not directly consumable:
   child of `register`, empty `<fields>`, empty `<description>`, hex strings in
   an `xs:integer` field).
 - **All 3242 field descriptions are the field name repeated.** There is no
-  semantic content at all — `CALC_EN` is documented as "CALC_EN".
+  semantic content at all 鈥?`CALC_EN` is documented as "CALC_EN".
 
 That last point is what matters most for the SVD route. Even after the other
 defects are corrected, the SVD is an address map without meaning: it says a
@@ -154,7 +154,7 @@ bit exists at position 7, not what it does.
 ### 5. What the manual does document, it does not share
 
 `swcu117i.pdf` contains 1441 occurrences of "Only to be used through TI
-provided API" — the semantic content an SVD cannot supply and the manual
+provided API" 鈥?the semantic content an SVD cannot supply and the manual
 declines to. Separately, the manual is copyrighted, so even the documented
 half cannot be redistributed next to the code that depends on it.
 
@@ -175,7 +175,7 @@ the same units on both families:
 | per-peripheral header tree | 43 files, 6.5 MB | 58 files |
 | "Only to be used through TI provided API" in those headers | **0** | **1054**, across 15 files |
 | the same phrase in the reference manual | **0** in 6.0 M characters | **1441** in 3.0 M characters |
-| header-to-SVD rebuild | viable — the manual specifies the registers | not viable — the clock cannot be specified from published material |
+| header-to-SVD rebuild | viable 鈥?the manual specifies the registers | not viable 鈥?the clock cannot be specified from published material |
 
 The MSPM0 manual (SLAU847, 6.0 M characters extracted) does not contain the
 phrase at all. The CC26x0 manual (SWCU117, 3.0 M characters) contains it once
@@ -214,18 +214,18 @@ With the radio in the tree, that test cannot pass, and the licence is why:
 
 - **The blobs cannot be redistributed.** The SDK licence permits distribution
   only as "embedded executable copies of such Licensed Materials that execute
-  solely and exclusively on, or in conjunction with, TI Devices" (§iv). They
+  solely and exclusively on, or in conjunction with, TI Devices" (搂iv). They
   cannot be committed, vendored, mirrored, or attached to a release.
-- **The download cannot be delegated.** §11 requires the downloader to make
-  export-control representations personally — that they are not located in or
+- **The download cannot be delegated.** 搂11 requires the downloader to make
+  export-control representations personally 鈥?that they are not located in or
   under the control of an embargoed country, are not on the SDN or Denied
   Persons lists, and will not use the materials for weapons end-uses. A CI
   runner cannot make those representations on a contributor's behalf, and a
   hosted service has no business accepting them. There is also a PRC
-  registration obligation in §11a that falls on the recipient.
+  registration obligation in 搂11a that falls on the recipient.
 - **The binary cannot be inspected to work around it.** The licence forbids
   reverse engineering the object-code portions, "nor permit any person or
-  entity to do so" — which closes the obvious fallback of disassembling the
+  entity to do so" 鈥?which closes the obvious fallback of disassembling the
   stack to demonstrate what it does.
 
 So every consumer must obtain the SDK individually, accept terms in their own
@@ -240,38 +240,75 @@ what "e-waste" means in engineering terms rather than as an insult: an artefact
 whose value cannot outlive its assembly.
 
 **This repository is the proof by construction.** It builds from a fresh clone
-— public submodules, `make`, zero errors, 1480 bytes of text — precisely
+鈥?public submodules, `make`, zero errors, 1480 bytes of text 鈥?precisely
 because it dropped the radio. Reproducibility was not achieved alongside the
 dead end; it was achieved *by* accepting the dead end.
 
+## Where the black box sits
+
+The question is not whether a black box exists. Silicon is opaque, always, and
+that is not a problem. The question is where the boundary falls and whether
+your own code can be audited against something written down.
+
+Three ways to ship a radio, in order of how well they survive scrutiny:
+
+**AT86RF233 — the box is in the silicon only.** A transceiver with no firmware
+at all: a documented register interface over SPI, and every line that drives it
+is yours. There is nothing opaque inside your image, so auditing means checking
+your code against the datasheet. This is the normal shape of a hardware
+component, and it is fine.
+
+**STM32WB55 — the box is on the other core.** The radio stack is a binary too,
+running on the M0+, flashed as a firmware image rather than linked into your
+M4 binary. Two things make the difference: it is a bounded peripheral you talk
+to through a documented interface, and it is **redistributable** — the
+middleware licence (SLA0044) permits "the redistribution, reproduction and use
+in source and binary forms ... with or without modification". So a project can
+vendor it, a clone can build, and CI can run.
+
+**CC26x0 — the box is inside your image.** The stack arrives as `.a` archives
+that link into the same binary as your code, cannot be redistributed, cannot be
+reverse engineered, and have no source equivalent. There is no boundary to
+point at. The opaque part is interleaved with your own, in one artefact you
+must hand over whole.
+
+That ordering is also what gets lost in the usual "is it open?" argument. The
+first is fully auditable. The second is auditable at its boundary — you can
+account for everything you wrote and identify the opaque part precisely. Only
+the third leaves you unable to answer the question at all.
+
+Which is the irony worth recording, because TI's customers for these dev kits
+are overwhelmingly companies, and companies are the ones who have to produce
+auditable evidence: security review, supply-chain attestation, certification
+against functional-safety or medical standards, and — increasingly — software
+bill-of-materials obligations under things like the EU Cyber Resilience Act.
+Those obligations attach to the shipped image. A component that cannot be
+declared in an SBOM, cannot be reviewed, and cannot be replaced is a
+procurement problem before it is an ideological one. The closed shape here is
+least suited to exactly the customer it is aimed at.
+
 ## Auditability is a delivery requirement, not a preference
 
-Everything above is a licensing and engineering argument. An individual can
-decide to live with a blob. A company generally cannot, and not for ideological
-reasons: it has to be able to evidence what it shipped.
+That obligation is no longer a matter of taste, and it lands on the integrator,
+who these regimes treat as the manufacturer:
 
-In the regimes that govern shipping products, the integrator is treated as the
-manufacturer and carries the obligation:
-
-- **EU Cyber Resilience Act** (Reg. (EU) 2024/2847) — in force since December
-  2024 with obligations phasing in through 2027. It requires vulnerability
-  handling, security updates for a defined support period, and a software bill
-  of materials.
-- **FDA §524B** of the FD&C Act — premarket cybersecurity for medical devices,
+- **EU Cyber Resilience Act** (Reg. (EU) 2024/2847) 鈥?in force since December
+  2024 with obligations phasing in through 2027: vulnerability handling,
+  security updates for a defined support period, and a software bill of
+  materials.
+- **FDA 搂524B** of the FD&C Act 鈥?premarket cybersecurity for medical devices,
   including an SBOM and a monitoring and patching plan.
-- **IEC 62443** for industrial automation and **UN R155** for automotive —
-  both push component-level transparency down the supply chain.
+- **IEC 62443** for industrial automation and **UN R155** for automotive 鈥?
+  component-level transparency pushed down the supply chain.
 
-An SBOM can *name* a binary. It cannot characterise one. None of these regimes
-is satisfied by the vendor's assurance that a blob is fine, because the
-obligation to assess and to patch sits with whoever put the product on the
-market.
+An SBOM can *name* a binary. It cannot characterise one, and none of these
+regimes is satisfied by the vendor's assurance that a blob is fine.
 
 And the radio stack is not an incidental blob. It is remotely reachable. The
 precedent is **SweynTooth** (2020): 18 vulnerabilities across the BLE SDKs of
 six SoC vendors, producing deadlocks, crashes, buffer overflows and in one case
 a bypass of the pairing procedure. **TI was among the affected vendors, with
-three CVEs in that set targeting the CC26xx family** — CVE-2019-17520,
+three CVEs in that set targeting the CC26xx family** 鈥?CVE-2019-17520,
 CVE-2019-19193 and CVE-2020-13593.
 
 So the question a compliance function asks is not academic: *when the next one
@@ -282,7 +319,7 @@ logic sits in silicon rather than flash, not even then.
 
 Unpatchable is not an inconvenience. It is a liability with a name attached.
 That is why an unauditable radio stack fails security review before it ever
-reaches a licensing review — and why this is a project killer rather than an
+reaches a licensing review 鈥?and why this is a project killer rather than an
 aesthetic objection.
 
 ## The hardware, and why it is being scrapped
@@ -292,7 +329,7 @@ this board.**
 
 The design drives the antenna through an RF front-end module rather than from
 the CC2640 directly: an AT2401C PA/LNA behind a 2450BM14G0011 balun and filter,
-with the matching network following TI's SWRA117D. That was deliberate — it was
+with the matching network following TI's SWRA117D. That was deliberate 鈥?it was
 meant to extend range.
 
 It also takes the board out of the unlicensed regime. With the FEM in the path
@@ -309,7 +346,7 @@ inspection: the operator has to be able to account for what the equipment is
 and what it emits.
 
 A firmware image that links a radio stack supplied as unreadable archives
-cannot be accounted for — not by the operator to an inspector, and not by
+cannot be accounted for 鈥?not by the operator to an inspector, and not by
 anyone downstream. The clock is not the obstacle here: driverlib's source is
 readable, and a mask ROM with a published source equivalent is a flash
 optimisation, not a secrecy problem. The stack is the obstacle, because there
@@ -353,7 +390,7 @@ and it is heavily concentrated:
 (56/57), UART0 (14/14), SSI0/1 (10/10), I2C0 (18/18), GPT0-3 (29/29 each),
 UDMA0 (19/19), WDT (9/9), CRYPTO (40/40), TRNG (22/22). The manual agrees:
 clustering its 1441 occurrences by nearby peripheral name gives VIMS 476,
-PRCM 66, FCFG1 7, IOC 2, and **zero** within ±400 characters of GPIO, UART,
+PRCM 66, FCFG1 7, IOC 2, and **zero** within 卤400 characters of GPIO, UART,
 SSI, I2C, GPT, WDT, UDMA, CRYPTO or TRNG.
 
 So on paper the peripherals are well documented. It does not help, and the
@@ -415,8 +452,8 @@ The SVD work in this repository is reusable as-is: the normalized device
 description, the verification against TI's headers, and the generation
 pipeline are all correct and independent of the application.
 
-Continuing means accepting two dependencies: TI's clock code, and — for
-anything using the radio — TI's precompiled stack. The first is a reasonable
+Continuing means accepting two dependencies: TI's clock code, and 鈥?for
+anything using the radio 鈥?TI's precompiled stack. The first is a reasonable
 trade; driverlib is BSD-3-Clause, readable and patchable, and reimplementing it
 against undocumented calibration data is worse in every way. The second is the
 one that matters, because there is no alternative to it at all.
@@ -425,7 +462,7 @@ one that matters, because there is no alternative to it at all.
 build system is the supported arrangement and it works. What it is not is a
 free-standing open stack: the clock has no specification and the radio has no
 source. A project content to depend on TI for those two things is perfectly
-viable — it just is not the project this repository was.
+viable 鈥?it just is not the project this repository was.
 
 ## Layout
 
@@ -438,7 +475,7 @@ viable — it just is not the project this repository was.
 | `contrib/cmsis` | submodule: ARM CMSIS 6 |
 | `contrib/irqn` | submodule: handler-table generator |
 | `contrib/svdconv` | submodule: SVD to header generator |
-| `hardware/` | KiCad sources for the CC2640 EVM — do not fabricate, see above |
+| `hardware/` | KiCad sources for the CC2640 EVM 鈥?do not fabricate, see above |
 | `docs/` | not tracked; see below |
 
 ## Building
