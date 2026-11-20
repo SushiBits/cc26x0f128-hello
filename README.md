@@ -15,20 +15,23 @@ open toolchain: GNU make, `arm-none-eabi-gcc`, and a device header generated
 from a CMSIS-SVD. No vendor IDE, no vendor SDK, no vendor build system.
 
 **Status: abandoned.** Kept as a record of why, and of the parts that did
-work. The short version: there is no free-standing open way to bring up a
-clock tree on this part. The only implementation that works needs TI's code,
-and taking it means taking the surrounding tree with it, which is not open from
-end to end. The hardware is being scrapped for a separate reason — see
+work. The short version: the clock setup is vendor code that is at least
+readable, but the radio stack is precompiled archives with no source and no
+equivalent, so anything using this part as a radio takes TI's tree along with
+it. The hardware is being scrapped for a separate reason — see
 [the hardware](#the-hardware-and-why-it-is-being-scrapped). See below.
 
 ## Why this is a dead end
 
-**There is no free and open way to bring up a clock tree on this part, and
-without a defined clock nothing beyond a blink runs.**
+**Anything beyond a blink requires the clock setup, the clock setup requires
+TI's code, and using this part as a radio requires TI's binary stack. The
+constraint was open tools throughout, so there was no version of this that
+worked.**
 
 The plan was to treat the CC26x0 like any other Cortex-M3: obtain a CMSIS-SVD,
 generate register headers from it, and write the peripheral code directly. The
-pipeline for that was built and works. What kills it is the clock.
+pipeline for that was built and works. What kills it is what has to be linked
+underneath.
 
 ### 1. The clock tree needs factory values the manual does not give you
 
@@ -61,46 +64,58 @@ There is no published source for those values and no description of how to
 interpret them. Reading them out blind and writing them back is guesswork with
 an oscillator.
 
-### 2. The clock setup exists only as vendor code
+### 2. The clock setup is vendor code — and the ROM is a distraction
 
 TI's answer to the above is driverlib, and driverlib is genuinely open:
-BSD-3-Clause, readable, patchable, redistributable.
+BSD-3-Clause, readable, patchable, redistributable. It also contains the clock
+setup in full. `setup.c` is a complete 394-line `SetupTrimDevice` that reads
+FCFG1 and trims the device, and all ten `ROM_*` calls in `osc.c` have a
+`NOROM_` source equivalent — `OSCClockSourceSet`, `OSCHF_TurnOnXosc`,
+`OSCHF_AttemptToSwitchToXosc` and the rest.
 
-It also does contain the clock setup. `setup.c` is a complete 394-line
-`SetupTrimDevice` implementation that reads FCFG1 and trims the device, and
-every one of the ten `ROM_*` calls in `osc.c` has a `NOROM_` source
-equivalent — `OSCClockSourceSet`, `OSCHF_TurnOnXosc`,
-`OSCHF_AttemptToSwitchToXosc` and the rest. The `ROM_` variants exist to save
-flash, not to withhold anything. Nothing about the oscillator is hidden behind
-a binary.
+That last point matters, because it removes the mask ROM from the argument.
+`ROM_SetupTrimDevice` and the `ROM_OSC*` family are flash-saving duplicates of
+behaviour that is published as readable source in the same package. Redirecting
+a call site to the `NOROM_` implementation is a `#define`; the ROM is never
+required. So a card that ships a ROM block is not a disclosure problem when the
+same logic is available as source — and here it is.
 
-The problem is not that the code is unreadable. It is that the code has no
-specification. What `SetupTrimDevice` does is interpret factory calibration
-values whose meaning is precisely what the manual declines to document. The
-code can be read, but it cannot be checked, and it cannot be rewritten from
-published information: its correctness rests on TI's authority alone.
+What is genuinely undocumented is narrower: the FCFG1 calibration the code
+consumes. You can read exactly what `SetupTrimDevice` does with each value, but
+not what the values mean, because their field semantics are what the manual
+declines to document. So the clock is inspectable, and reimplementable only
+with the source in hand — but not verifiable against a specification, and not
+writable from published information alone.
 
-That is the narrower sense in which this is not an open platform. Not a
-licence, and not a hidden blob, but a load-bearing piece of logic with no
-documented contract. Anyone writing their own clock setup would be working
-against undocumented per-die data with no way to know they had got it right
-until the part misbehaved in a way that is very hard to attribute.
+That is a real limit, and it is a modest one. It is not the limit that kills
+this project. The next finding is.
 
-### 3. The radio cannot be programmed directly
+### 3. The radio is a binary, and unlike the ROM it has no source equivalent
 
-The RF core is a separate Cortex-M0 with TI-supplied firmware. The BLE stack
-is a binary. There is no register-level path to a working radio link, which
-means anyone using this part ships TI's stack, which in turn ships its own
-build system and its own HAL. That undercuts the point of a from-scratch
-starter for anything above a toy.
+The RF core is a separate Cortex-M0 running TI-supplied firmware, and the BLE
+protocol stack ships as precompiled archives with no source: hundreds of them
+in `blelib/`, `cc2640_ctrl_*.a` at 0.7–1.1 MB each and `host_*.a` at 1.0–1.8 MB
+each, plus the HCI transport layers. Nothing in the SDK corresponds to them.
 
-This is not a defect in TI's documentation; it is how the part works. It is
-also the least surprising of these, and on its own it would not have been
-fatal — a project that used TI's stack deliberately is a normal project. What
-makes it terminal here is that the stack is not a library you can take or
-leave. Using it means adopting TI's build system, TI-RTOS and XDCtools along
-with it, and for BLE, linking a binary. The clock dependency from finding 2
-is what forces that adoption in the first place.
+This is where the ROM comparison stops being a distraction and becomes the
+argument. For the oscillator, TI publishes the logic as source and the ROM is
+optional. For the radio, there is no source at all, no `NOROM_` equivalent, and
+no way to build a link without the archives. There is no register-level path to
+a working radio either, so the binary is not a convenience — it is the only
+implementation that exists.
+
+Which means using this part as a radio means adopting TI's build system,
+TI-RTOS and XDCtools along with the archives. A project that chooses that
+deliberately is a normal project. This one did not, and could not: the
+constraint was open tools, and the radio alone violates it regardless of
+anything else in the tree.
+
+Worth being explicit about what would fix it, since it is not exotic. TI could
+document the ROM in the reference manual or an application note, and an
+operator could then show that document to an inspector — the oscillator case is
+already nearly there, because driverlib's source is the reference. No
+equivalent exists for the stack, and no amount of documentation substitutes for
+source when the question is what the transmitter is actually doing.
 
 ### 4. The device description that might have bypassed all of it does not exist
 
@@ -209,15 +224,16 @@ own obligations, and one of them is that the station must be open to
 inspection: the operator has to be able to account for what the equipment is
 and what it emits.
 
-A firmware image built on a clock setup with no published specification, and on
-a radio stack supplied as an unreadable binary, cannot be accounted for — not
-by the operator to an inspector, and not by anyone downstream. The closed parts
-do not merely make this project awkward. They make it impossible to show that
-the transmitter is doing what it claims to be doing.
+A firmware image that links a radio stack supplied as unreadable archives
+cannot be accounted for — not by the operator to an inspector, and not by
+anyone downstream. The clock is not the obstacle here: driverlib's source is
+readable, and a mask ROM with a published source equivalent is a flash
+optimisation, not a secrecy problem. The stack is the obstacle, because there
+is nothing to read and no equivalent to substitute.
 
 So the two failures compound. The FEM turned the board into a transmitter that
-needs amateur rules in order to be legal at all. TI's closed code made it a
-transmitter that cannot satisfy those rules. Neither is fixable within this
+needs amateur rules in order to be legal at all. The closed radio stack made it
+a transmitter that cannot satisfy those rules. Neither is fixable within this
 design, which is why the boards are being scrapped rather than shelved.
 
 *This is the reasoning behind the decision, not legal advice; the specifics
@@ -227,7 +243,7 @@ vary by jurisdiction.*
 
 The sections below are what the attempt produced. They are accurate and are
 the reason this repository is published rather than deleted, but none of them
-unblock the clock.
+supply a clock setup or a radio stack.
 
 ## What is documented, and why it does not matter
 
@@ -258,8 +274,8 @@ SSI, I2C, GPT, WDT, UDMA, CRYPTO or TRNG.
 So on paper the peripherals are well documented. It does not help, and the
 distinction is worth being exact about: a documented register is not a working
 peripheral. GPIO, UART, SPI, I2C and the timers all take their timing from the
-clock tree, and the clock tree is finding 1. The registers being described
-does not make them reachable without a defined clock to run them from.
+clock tree, and the clock tree needs driverlib. The registers being described
+does not make them reachable without something to set the clock up.
 
 
 ## What works
@@ -286,7 +302,8 @@ contrib/platform/share/CC26x0F128.svd
   generated header, and `make` links.
 
 That is where it stops. The code builds and links, but the tick it configures
-is derived from the clock tree described at the top, so it would not run.
+is derived from the clock tree that driverlib would have to set up, so it would
+not run as built.
 
 ## What is unfinished
 
@@ -313,18 +330,17 @@ The SVD work in this repository is reusable as-is: the normalized device
 description, the verification against TI's headers, and the generation
 pipeline are all correct and independent of the application.
 
-Continuing means accepting that the clock setup will be TI's code. There is no
-third option: it is either their implementation, or your own against
-undocumented calibration data. For most people the first is obviously correct
-— it works, it is BSD-3-Clause, and it can be read and patched. That is a
-reasonable engineering decision, and it is a different decision from the one
-this project set out to make.
+Continuing means accepting two dependencies: TI's clock code, and — for
+anything using the radio — TI's precompiled stack. The first is a reasonable
+trade; driverlib is BSD-3-Clause, readable and patchable, and reimplementing it
+against undocumented calibration data is worse in every way. The second is the
+one that matters, because there is no alternative to it at all.
 
 `cc26xxware` (driverlib plus the `hw_*.h` headers) on top of the BLE SDK's
 build system is the supported arrangement and it works. What it is not is a
-free-standing open stack: the clock has no specification, and the radio has no
-source. A project that is content to depend on TI for those two things is
-perfectly viable — it just is not the project this repository was.
+free-standing open stack: the clock has no specification and the radio has no
+source. A project content to depend on TI for those two things is perfectly
+viable — it just is not the project this repository was.
 
 ## Layout
 
