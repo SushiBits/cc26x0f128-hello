@@ -16,12 +16,6 @@ CXXLD := $(CXX)
 OBJCOPY := $(ARCH)objcopy
 SIZE := $(ARCH)size
 
-# Device descriptions are not shipped by every vendor: the MSPM0 SDK has no SVD
-# at all, and its <ti/devices/...> headers are a 68-file tree of per-peripheral
-# register definitions, so the SVD for it has to be sourced separately.
-SVDCONV_PATH := C:\Keil_v5\UV4
-SVDCONV := $(SVDCONV_PATH)/SVDConv.exe
-
 SVD_FILES := $(wildcard contrib/platform/share/*.svd)
 DEV_HEADERS := $(patsubst %.svd,%.h,$(subst /share/,/include/,$(SVD_FILES)))
 DEV_HANDLERS := $(DEV_HEADERS:%.h=%_handlers.h)
@@ -65,7 +59,7 @@ size: $(TARGET)
 	$(SIZE) -A $<
 
 contrib/platform/include/%.h: contrib/platform/share/%.svd
-	-$(SVDCONV) $< -o $(dir $@) --generate=header --fields=macro --fields=enum
+	python3 contrib/svdconv/svdconv.py $< -o $(dir $@) --generate=header --fields=macro --fields=enum
 
 contrib/platform/include/%_handlers.h: contrib/platform/include/%.h
 	python3 contrib/irqn/irqn.py -i $< -o $@

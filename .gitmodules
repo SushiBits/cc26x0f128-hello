@@ -4,3 +4,6 @@
 [submodule "contrib/irqn"]
 	path = contrib/irqn
 	url = https://github.com/SushiBits/irqn
+[submodule "contrib/svdconv"]
+	path = contrib/svdconv
+	url = https://github.com/SushiBits/svdconv.git
