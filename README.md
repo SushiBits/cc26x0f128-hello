@@ -1,5 +1,12 @@
 # cc26x0f128-hello
 
+> **The avoidance of TI tooling in this project is deliberate.**
+>
+> Do not raise issues regarding CCS, SysConfig or the TI BLE SDK. Such issues
+> will be deleted and their authors blocked immediately. This is not an
+> oversight, an unmet prerequisite or a gap to be filled in: the constraint is
+> the reason the project exists. Let this serve as forewarning.
+
 A bare-metal C starter for the TI CC2640F128 (SimpleLink CC26x0), built on an
 open toolchain: GNU make, `arm-none-eabi-gcc`, and a device header generated
 from a CMSIS-SVD. No vendor IDE, no vendor SDK, no vendor build system.
