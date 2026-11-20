@@ -327,7 +327,10 @@ addresses in flash, consumed by the boot ROM and by reset-time hardware options,
 and FSP fills it from ordinary compile-time constants — `BSP_CFG_OPTION_SETTING_OFS0`
 and `OFS1` placed into `.option_setting_ofs0` and `.option_setting_ofs1`. A
 flash-resident config block read by immutable ROM is an ordinary design, and on a
-part whose fields are documented it is a perfectly workable one.
+part whose fields are documented it is a perfectly workable one. A bare-metal
+RA2E1 port that keeps its option bytes in an ordinary `config.c`, with no FSP in
+the build at all and device headers generated from a vendor-supplied SVD, is at
+[SushiBits/ra2e1-hello](https://github.com/SushiBits/ra2e1-hello).
 
 What differs is what the fields mean. Renesas documents its option bytes, so the
 constants that produce them can be chosen, reviewed and defended. CCFG's fields
