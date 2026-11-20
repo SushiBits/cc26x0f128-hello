@@ -292,6 +292,14 @@ were sealed off tomorrow, vendor logic would still be inside your firmware,
 because the clock tree the radio depends on is vendor-written and cannot be
 rewritten from published information. There is no line that excludes it.
 
+Nor does it help that this code only writes numbers into registers. A
+calibration constant applied to an oscillator register whose derivation is
+undocumented is no more accountable to an auditor than an encrypted blob, and in
+one respect it is worse: it is indistinguishable from code you wrote. In a diff,
+in a review, in an SBOM, a magic number supplied by the vendor looks exactly
+like a magic number you chose yourself. The blob at least announces that it is a
+blob.
+
 That is the shape of the difference, and it is not about size or licence text.
 AT86RF233 puts the box in silicon and STM32WB55 puts it on another core; both
 boundaries are facts about the part that survive being rebuilt by anybody. The
