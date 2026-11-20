@@ -360,6 +360,27 @@ against registers whose meaning you can state and defend. That is not a
 hypothetical shape: it is what Renesas ships. The structure is not the problem.
 The withheld semantics are.
 
+There is a second axis, and it decides whether an opaque part may be *explained*
+rather than merely declared. TI's licence forbids reverse engineering the object
+code — "nor permit any person or entity to do so" — so the one route that could
+convert a blob into an answer is closed by contract, not merely blocked by
+effort.
+
+Not every vendor does that. Espressif ships its Wi-Fi and Bluetooth stacks as
+binary archives under Apache-2.0, published in a public repository in Object
+form, which carries no such restriction. The boundary is still inside the image
+and the source is still absent, but a determined reader may lawfully disassemble
+it and write down what it does. ST's wireless firmware sits between the two: the
+licence is permissive, but the image is delivered encrypted, so permission to
+look is not the same as an ability to.
+
+For the purpose this document cares about — accounting for a transmitter to
+somebody — the right to investigate matters more than the presence of source.
+Source is the easy case. The hard case is a blob, and it is not one case: a blob
+you may lawfully disassemble, a blob you are permitted to look at but cannot, and
+a blob you are contractually forbidden to touch are three different positions
+with three different answers.
+
 That is the shape of the difference, and it is not about size or licence text.
 AT86RF233 puts the box in silicon and STM32WB55 puts it on another core; both
 boundaries are facts about the part that survive being rebuilt by anybody. The
