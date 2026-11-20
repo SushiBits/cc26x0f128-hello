@@ -6,6 +6,9 @@
 > will be deleted and their authors blocked immediately. This is not an
 > oversight, an unmet prerequisite or a gap to be filled in: the constraint is
 > the reason the project exists. Let this serve as forewarning.
+>
+> This is a moderation rule covering those three tools and nothing wider.
+> Issues and pull requests on anything else are welcome.
 
 A bare-metal C starter for the TI CC2640F128 (SimpleLink CC26x0), built on an
 open toolchain: GNU make, `arm-none-eabi-gcc`, and a device header generated
@@ -15,7 +18,8 @@ from a CMSIS-SVD. No vendor IDE, no vendor SDK, no vendor build system.
 work. The short version: there is no free-standing open way to bring up a
 clock tree on this part. The only implementation that works needs TI's code,
 and taking it means taking the surrounding tree with it, which is not open from
-end to end. See below.
+end to end. The hardware is being scrapped for a separate reason — see
+[the hardware](#the-hardware-and-why-it-is-being-scrapped). See below.
 
 ## Why this is a dead end
 
@@ -182,6 +186,43 @@ missing. A method that works on one TI family is defeated on another by what
 the documentation chooses to say, in a way no amount of engineering effort
 recovers.
 
+## The hardware, and why it is being scrapped
+
+The KiCad sources in `hardware/` are kept for the record. **Do not fabricate
+this board.**
+
+The design drives the antenna through an RF front-end module rather than from
+the CC2640 directly: an AT2401C PA/LNA behind a 2450BM14G0011 balun and filter,
+with the matching network following TI's SWRA117D. That was deliberate — it was
+meant to extend range.
+
+It also takes the board out of the unlicensed regime. With the FEM in the path
+the output no longer fits inside the conducted and EIRP limits for an
+unlicensed intentional radiator under FCC Part 15, and the same applies to the
+equivalents in ETSI and SRRC. A board like this cannot be certified, and cannot
+lawfully be operated as a Part 15 device. What it is instead is amateur radio
+equipment.
+
+That in itself would be fine. Home-built transmitters are a normal part of the
+hobby, and they do not need certification. But amateur operation carries its
+own obligations, and one of them is that the station must be open to
+inspection: the operator has to be able to account for what the equipment is
+and what it emits.
+
+A firmware image built on a clock setup with no published specification, and on
+a radio stack supplied as an unreadable binary, cannot be accounted for — not
+by the operator to an inspector, and not by anyone downstream. The closed parts
+do not merely make this project awkward. They make it impossible to show that
+the transmitter is doing what it claims to be doing.
+
+So the two failures compound. The FEM turned the board into a transmitter that
+needs amateur rules in order to be legal at all. TI's closed code made it a
+transmitter that cannot satisfy those rules. Neither is fixable within this
+design, which is why the boards are being scrapped rather than shelved.
+
+*This is the reasoning behind the decision, not legal advice; the specifics
+vary by jurisdiction.*
+
 ## The rest of the record
 
 The sections below are what the attempt produced. They are accurate and are
@@ -296,7 +337,7 @@ perfectly viable — it just is not the project this repository was.
 | `contrib/cmsis` | submodule: ARM CMSIS 6 |
 | `contrib/irqn` | submodule: handler-table generator |
 | `contrib/svdconv` | submodule: SVD to header generator |
-| `hardware/` | KiCad sources for the CC2640 EVM |
+| `hardware/` | KiCad sources for the CC2640 EVM — do not fabricate, see above |
 | `docs/` | not tracked; see below |
 
 ## Building
